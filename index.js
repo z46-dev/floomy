@@ -1208,7 +1208,7 @@ const sockets = (function() {
 let updateLoopDelta = 0,
     updateLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - updateLoopDelta < updateLoopTick * .75) {
+    if (Date.now() - updateLoopDelta < updateLoopTick * .6) {
         return;
     }
     flowers = flowers.filter(flower => !!flower && flower.health.check());
@@ -1262,7 +1262,7 @@ setInterval(function() {
 let gameLoopDelta = 0,
     gameLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - gameLoopDelta < gameLoopTick * .75) {
+    if (Date.now() - gameLoopDelta < gameLoopTick * .6) {
         return;
     }
     let start = performance.now();
