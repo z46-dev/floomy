@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>floomy.io</title>
+        <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Expires" content="0"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+        <meta name="description" content="Crappy Florr.io: A clone of florr.io">
+        <meta name="author" content="Oblivion#4800">
+        <meta name="keywords" content="flor, floor, florr, .io, game, online, .io game, diep, arras, agar, woomy, digdig, pornhub kids">
+        <meta name="robots" content="index, follow">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:400,700">
+        <link rel="stylesheet" href="./main.css">
+        <link rel="icon" href="./download.png" sizes="32x32">
+        <meta id="versionHash" content="VERSION_HASH_HERE">
+        <meta id="versionID" content="VERSION_ID_HERE">
+    </head>
+    <body oncontextmenu="return false;">
+        <div class="loadingDiv" style="display: block;">
+            <span>Loading...</span>
+        </div>
+        <div class="mainMenu" style="display: none;">
+            <canvas id="menuCanvas"></canvas>
+            <div class="holder">
+                <span class="title">floomy.io</span><br/>
+                <span class="subtitle">This pretty little flower is called...</span><br/>
+                <input type="text" placeholder="unnamed flower" id="playerNameInput">
+                <button id="playButton">Play</button>
+            </div>
+            <div class="linkHolder">
+                <a style="background: #f64d4d; width: 110px" href="https://woomy.surge.sh/" target="_blank">Woomy-Arras.io</a>
+                <a style="background: #7288da; width: 110px" href="https://discord.gg/FgxE4eVbtH" target="_blank">Our Discord</a>
+                <a style="background: #b58efd; width: 110px" href="https://florr.io/" target="_blank">florr.io</a>
+                <a style="background: #8efdb3; width: 110px" href="https://static.florr.io/old/" target="_blank">static florr.io</a>
+            </div>
+        </div>
+        <canvas id="gameCanvas" style="display:none;"></canvas>
+        <script src="./app.js"></script>
+    </body>
+</html>

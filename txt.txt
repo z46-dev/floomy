@@ -1,0 +1,25 @@
+__**Beta-Tester Rules :betaTester_tank:**__ These are the rules and jobs of Beta-Testers
+
+:betaTester_tank: @Beta-Testers are responsible for testing, balancing and preparing new tanks for release.
+
+1) Please test all tanks in Beta Tanks pages and work with devs on balancing them and preparing them for release.
+
+2) Do not under any circumstances attack a normal player while using ANY Beta-Tester feature. (This includes: Beta-Tanks, Removed Tanks and anything else Beta-Testers may have)
+
+3) Do not use Rainbow mode in TDM modes (excluding Boss rush) as to not confuse enemy players.
+
+4) Do not use passive mode while playing the game. It should only be used to avoid confrontation while testing.
+
+5) Do not AFK with Observer for long periods of time.
+
+6) Do not use your token when not testing, you will be unable to get a valid world record if you are using a Beta Token.
+
+7) Do not use anything that can lag or crash the server. If you find something that can, report it to a Developer and cease to use it until fixed.
+
+8) Do not suicide to deny score to other players using the K key.
+
+9) Do not reset your tank to Basic with the P key during normal gameplay.
+
+First strike: Demotion for three days
+Second strike: Demotion for one week
+Third strike: Permanent demotion

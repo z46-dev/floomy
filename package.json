@@ -1,0 +1,19 @@
+{
+    "name": "florr",
+    "version": "1.0.0",
+    "description": "Florr.io clone lol",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "author": "Oblivion#4800",
+    "dependencies": {
+        "cors": "latest",
+        "discord.js": "^13.8.0",
+        "express-ws": "latest",
+        "javascript-obfuscator": "latest"
+    },
+    "engines": {
+        "node": "v18.x"
+    }
+}
