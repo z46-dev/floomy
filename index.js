@@ -1205,7 +1205,12 @@ const sockets = (function() {
     }
 })();
 
+let updateLoopDelta = 0,
+    updateLoopTick = 1000 / 60;
 setInterval(function() {
+    if (Date.now() - updateLoopDelta < updateLoopTick) {
+        return;
+    }
     flowers = flowers.filter(flower => !!flower && flower.health.check());
     mobs = mobs.filter(mob => !!mob && mob.health.check());
     for (let client of sockets.clients) {
@@ -1214,7 +1219,8 @@ setInterval(function() {
     for (let bot of bots) {
         bot.update();
     }
-}, 1000 / 30);
+    updateLoopDelta = Date.now();
+}, updateLoopTick);
 
 setInterval(function() {
     for (let client of sockets.clients) {
@@ -1253,7 +1259,12 @@ setInterval(function() {
     }
 }, 750);
 
+let gameLoopDelta = 0,
+    gameLoopTick = 1000 / 60;
 setInterval(function() {
+    if (Date.now() - gameLoopDelta < gameLoopTick) {
+        return;
+    }
     let start = performance.now();
     flowers = flowers.filter(flower => !!flower && flower.health.check());
     mobs = mobs.filter(mob => !!mob && mob.health.check());
@@ -1330,7 +1341,8 @@ setInterval(function() {
     }
     world.mspt = (performance.now() - start).toFixed(1);
     world.frames ++;
-}, 1000 / 60);
+    gameLoopDelta = Date.now();
+}, gameLoopTick);
 
 const app = express();
 app.use(cors());
