@@ -321,7 +321,7 @@
         const cryptoIn = new CRYPTO(INBOUND_KEYS);
         let playerNameInput = document.getElementById("playerNameInput");
         localStorage.playerName = playerNameInput.value;
-        let socket = new WebSocket(`${location.protocol.replace("http", "ws")}//${location.host}/?name=${playerNameInput.value}`);
+        let socket = new WebSocket(`${location.protocol.replace("http", "ws")}//${window.serverIP || location.host}/?name=${playerNameInput.value}`);
         world.socket = socket;
         socket.binaryType = "arraybuffer";
         socket.open = false;
