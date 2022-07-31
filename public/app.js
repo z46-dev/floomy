@@ -16,6 +16,7 @@
         green: "#00e06c",
         purple: "#be7ff5",
         gold: "#ffe46b",
+        darkGold: mixColors("#ffe46b", "#000000", .2),
         pink: "#f177dd",
         grey: "#999999",
         barGreen: "#86c280",
@@ -48,13 +49,13 @@
     let PETAL_CONFIG, MOB_CONFIG, global = {
         gameStart: false,
         rarityColors: {
-            "Common": mixColors(colors.green, "#FFFFFF", .25),
-            "Unusual": mixColors(colors.gold, "#FFFFFF", .25),
-            "Rare": mixColors(colors.blue, "#FFFFFF", .25),
-            "Epic": mixColors(colors.purple, "#FFFFFF", .25),
-            "Legendary": mixColors(colors.red, "#FFFFFF", .25),
-            "Mythical": mixColors(colors.cyan, "#FFFFFF", .25),
-            "Unique": mixColors(colors.pink, "#FFFFFF", .25)
+            "Common": "#7fef6e",
+            "Unusual": "#ffe65d",
+            "Rare": "#5e4de2",
+            "Epic": "#871fdf",
+            "Legendary": "#df1f20",
+            "Mythical": "#20d9dc",
+            "Unique": "#df1f67"
         },
         screenRatio: window.innerWidth * devicePixelRatio / 1920
     };
@@ -164,6 +165,9 @@
     }
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+
+    const imageCanvas = document.createElement("canvas");
+    const imageCtx = imageCanvas.getContext("2d");
 
     function onResize() {
         canvas.width = innerWidth * devicePixelRatio;
@@ -371,10 +375,11 @@
                                 index = world.flowers.findIndex(entity => entity.id === id);
                             if (index > -1) { // Update
                                 let flowerFlags = reader.getUint8();
+                                world.flowers[index].name = reader.getStringUTF8();
                                 world.flowers[index].hit = flowerFlags & 1;
                                 world.flowers[index].poisoned = flowerFlags & 2;
-                                world.flowers[index].rx = reader.getInt16();
-                                world.flowers[index].ry = reader.getInt16();
+                                world.flowers[index].rx = reader.getInt32();
+                                world.flowers[index].ry = reader.getInt32();
                                 world.flowers[index].size = reader.getUint8();
                                 world.flowers[index].health.real = reader.getUint8() / 100;
                                 world.flowers[index].fade = Math.min(1, world.flowers[index].fade + .2);
@@ -388,8 +393,8 @@
                                     if (index2 > -1) { // Update
                                         let petalFlags = reader.getUint8();
                                         world.flowers[index].petals[index2].hit = petalFlags & 1;
-                                        world.flowers[index].petals[index2].rx = reader.getInt16();
-                                        world.flowers[index].petals[index2].ry = reader.getInt16();
+                                        world.flowers[index].petals[index2].rx = reader.getInt32();
+                                        world.flowers[index].petals[index2].ry = reader.getInt32();
                                         world.flowers[index].petals[index2].size = reader.getUint8();
                                         world.flowers[index].petals[index2].fade = Math.min(1, world.flowers[index].petals[index2].fade + .2);
                                         let index3 = reader.getInt8();
@@ -399,8 +404,8 @@
                                     } else { // New info
                                         let petalFlags = reader.getUint8(),
                                             hit = petalFlags & 1,
-                                            rx = reader.getInt16(),
-                                            ry = reader.getInt16();
+                                            rx = reader.getInt32(),
+                                            ry = reader.getInt32();
                                         world.flowers[index].petals.push({
                                             id: id2,
                                             x: rx,
@@ -422,8 +427,8 @@
                                     if (index2 > -1) { // Update
                                         let petalFlags = reader.getUint8();
                                         world.flowers[index].projectiles[index2].hit = petalFlags & 1;
-                                        world.flowers[index].projectiles[index2].rx = reader.getInt16();
-                                        world.flowers[index].projectiles[index2].ry = reader.getInt16();
+                                        world.flowers[index].projectiles[index2].rx = reader.getInt32();
+                                        world.flowers[index].projectiles[index2].ry = reader.getInt32();
                                         world.flowers[index].projectiles[index2].size = reader.getUint8();
                                         world.flowers[index].projectiles[index2].rangle = reader.getFloat32();
                                         world.flowers[index].projectiles[index2].fade = Math.min(1, world.flowers[index].projectiles[index2].fade + .2);
@@ -433,8 +438,8 @@
                                         projectile.id = id2;
                                         let projectileFlags = reader.getUint8();
                                         projectile.hit = projectileFlags & 1;
-                                        projectile.x = projectile.rx = reader.getInt16();
-                                        projectile.y = projectile.ry = reader.getInt16();
+                                        projectile.x = projectile.rx = reader.getInt32();
+                                        projectile.y = projectile.ry = reader.getInt32();
                                         projectile.size = reader.getUint8();
                                         projectile.angle = projectile.rangle = reader.getFloat32();
                                         projectile.fade = .1;
@@ -458,11 +463,13 @@
                                 world.flowers[index].petals = world.flowers[index].petals.filter(petal => petal.fade > 0);
                             } else { // New
                                 let flowerFlags = reader.getUint8(),
-                                    rx = reader.getInt16(),
-                                    ry = reader.getInt16(),
+                                    name = reader.getStringUTF8(),
+                                    rx = reader.getInt32(),
+                                    ry = reader.getInt32(),
                                     projectileAmount = 0;
                                 world.flowers.push({
                                     id: id,
+                                    name: name,
                                     x: rx,
                                     rx: rx,
                                     y: ry,
@@ -487,8 +494,8 @@
                                             petal.id = +reader.getStringUTF8();
                                             let petalFlags = reader.getUint8();
                                             petal.hit = petalFlags & 1;
-                                            petal.x = petal.rx = reader.getInt16();
-                                            petal.y = petal.ry = reader.getInt16();
+                                            petal.x = petal.rx = reader.getInt32();
+                                            petal.y = petal.ry = reader.getInt32();
                                             petal.size = reader.getUint8();
                                             petal._petal = PETAL_CONFIG[reader.getInt8()] || PETAL_CONFIG[0];
                                             petal.fade = .1;
@@ -505,8 +512,8 @@
                                             projectile.id = +reader.getStringUTF8();
                                             let projectileFlags = reader.getUint8();
                                             projectile.hit = projectileFlags & 1;
-                                            projectile.x = projectile.rx = reader.getInt16();
-                                            projectile.y = projectile.ry = reader.getInt16();
+                                            projectile.x = projectile.rx = reader.getInt32();
+                                            projectile.y = projectile.ry = reader.getInt32();
                                             projectile.size = reader.getUint8();
                                             projectile.angle = projectile.rangle = reader.getFloat32();
                                             projectile.projectile = (PETAL_CONFIG[reader.getInt8()] || PETAL_CONFIG[0]).frag;
@@ -529,8 +536,8 @@
                             if (index > -1) { // Update
                                 world.mobs[index].hit = flags & 1;
                                 world.mobs[index].poisoned = flags & 2;
-                                world.mobs[index].rx = reader.getInt16();
-                                world.mobs[index].ry = reader.getInt16();
+                                world.mobs[index].rx = reader.getInt32();
+                                world.mobs[index].ry = reader.getInt32();
                                 world.mobs[index].size = reader.getUint8();
                                 world.mobs[index]._mob = MOB_CONFIG[reader.getUint8()] || MOB_CONFIG[0];
                                 world.mobs[index].rangle = reader.getFloat32();
@@ -543,8 +550,8 @@
                                     if (index2 > -1) { // Update
                                         let petalFlags = reader.getUint8();
                                         world.mobs[index].projectiles[index2].hit = petalFlags & 1;
-                                        world.mobs[index].projectiles[index2].rx = reader.getInt16();
-                                        world.mobs[index].projectiles[index2].ry = reader.getInt16();
+                                        world.mobs[index].projectiles[index2].rx = reader.getInt32();
+                                        world.mobs[index].projectiles[index2].ry = reader.getInt32();
                                         world.mobs[index].projectiles[index2].size = reader.getUint8();
                                         world.mobs[index].projectiles[index2].rangle = reader.getFloat32();
                                         world.mobs[index].projectiles[index2].fade = Math.min(1, world.mobs[index].projectiles[index2].fade + .2);
@@ -553,8 +560,8 @@
                                         projectile.id = id2;
                                         let projectileFlags = reader.getUint8();
                                         projectile.hit = projectileFlags & 1;
-                                        projectile.x = projectile.rx = reader.getInt16();
-                                        projectile.y = projectile.ry = reader.getInt16();
+                                        projectile.x = projectile.rx = reader.getInt32();
+                                        projectile.y = projectile.ry = reader.getInt32();
                                         projectile.size = reader.getUint8();
                                         projectile.angle = projectile.rangle = reader.getFloat32();
                                         projectile.fade = .1;
@@ -570,8 +577,8 @@
                                 }
                                 world.mobs[index].projectiles = world.mobs[index].projectiles.filter(projectile => projectile.fade > 0);
                             } else { // New
-                                let x = reader.getInt16(),
-                                    y = reader.getInt16();
+                                let x = reader.getInt32(),
+                                    y = reader.getInt32();
                                 world.mobs.push({
                                     id: id,
                                     x: x,
@@ -593,8 +600,8 @@
                                             projectile.id = +reader.getStringUTF8();
                                             let projectileFlags = reader.getUint8();
                                             projectile.hit = projectileFlags & 1;
-                                            projectile.x = projectile.rx = reader.getInt16();
-                                            projectile.y = projectile.ry = reader.getInt16();
+                                            projectile.x = projectile.rx = reader.getInt32();
+                                            projectile.y = projectile.ry = reader.getInt32();
                                             projectile.size = reader.getUint8();
                                             projectile.angle = projectile.rangle = reader.getFloat32();
                                             projectile.fade = .1;
@@ -611,14 +618,14 @@
                             let id = +reader.getStringUTF8(),
                                 index = world.drops.findIndex(drop => drop.id === id);
                             if (index > -1) { // Update
-                                world.drops[index].rx = reader.getInt16();
-                                world.drops[index].ry = reader.getInt16();
+                                world.drops[index].rx = reader.getInt32();
+                                world.drops[index].ry = reader.getInt32();
                                 world.drops[index].size = reader.getUint8();
                                 world.drops[index].index = reader.getUint8();
-                                world.drops[index].fade = Math.min(1, world.mobs[index].fade + .2);
+                                world.drops[index].fade = Math.min(1, world.drops[index].fade + .2);
                             } else { // New
-                                let x = reader.getInt16(),
-                                    y = reader.getInt16();
+                                let x = reader.getInt32(),
+                                    y = reader.getInt32();
                                 world.drops.push({
                                     id: id,
                                     x: x,
@@ -715,6 +722,10 @@
                 } else if (event.keyCode === 8) {
                     if (world.inventory.state === 1) {
                         socket.talk(2, world.inventory.myIndex, -1);
+                    }
+                } else if (event.keyCode === 13) {
+                    if (world.playerID === -1) {
+                        socket.talk(3);
                     }
                 }
             });
@@ -1343,12 +1354,6 @@
             if (object.id === world.playerID) {
                 player.camera.x = object.x;
                 player.camera.y = object.y;
-                for (let petal of object.petals) { // It's better to have it here so we only unlock the ones WE GET
-                    if (!world.seenPetals.includes([petal._petal.name, petal._petal.rarity].join("-"))) {
-                        world.seenPetals.push([petal._petal.name, petal._petal.rarity].join("-"));
-                        storage.set("unlockedPetals", world.seenPetals);
-                    }
-                }
             }
             object.petals.forEach(petal => {
                 petal.x = lerp(petal.x, petal.rx, .175);
@@ -1377,6 +1382,9 @@
             ctx.globalAlpha = object.fade;
             let myColor = mixColors(colors[object.poisoned ? "purple" : object.color || "gold"], colors.hit, +object.hit * (object.poisoned ? .5 : 1));
             drawPolygon(ctx, 0, 0, 0, object.size * object.fade, 0, myColor, mixColors(myColor, "#000000", 0.25), object.id);
+            if (object.id !== world.playerID) {
+                drawText(ctx, object.name, 0, -object.size * 2, 10, "center");
+            }
             ctx.globalAlpha = object.health.fade;
             ctx.lineWidth = 10;
             ctx.lineJoin = "round";
@@ -1410,10 +1418,6 @@
             ctx.strokeStyle = "#555555";
             ctx.fill();
         }
-        drawText(ctx, "floomy.io", 20, 40, 15, "left");
-        drawText(ctx, `${world.serverEntities} entities | ${world.mspt}ms tick`, 20, 75, 8, "left");
-        drawText(ctx, `${world.bandwidth.in}bps in | ${world.bandwidth.out}bps out`, 20, 95, 8, "left");
-        drawText(ctx, `${world.latency} ms | ${world.fps} FPS`, 20, 115, 8, "left");
         if (world.inventory) {
             let tileSize = 70,
                 spacing = 20,
@@ -1425,12 +1429,17 @@
             for (let i = 0; i < world.inventory.active.length; i ++) {
                 let petal = PETAL_CONFIG[world.inventory.active[i]];
                 let xx = offX + tileSize * i + spacing * i;
-                ctx.fillStyle = petal ? mixColors(global.rarityColors[petal.rarity], "#FFFFFF", (world.inventory.activeSelection === i) * .334) : defaultFill;
-                ctx.strokeStyle = petal ? mixColors(mixColors(global.rarityColors[petal.rarity], "#000000", .25), "#FFFFFF", (world.inventory.activeSelection === i) * .334) : defaultStroke;
-                ctx.lineWidth = 7.5;
+                {
+                    imageCanvas.width = tileSize;
+                    imageCanvas.height = tileSize;
+                    imageCtx.fillStyle = petal ? mixColors(global.rarityColors[petal.rarity], "#FFFFFF", (world.inventory.activeSelection === i) * .334) : defaultFill;
+                    imageCtx.strokeStyle = petal ? mixColors(mixColors(global.rarityColors[petal.rarity], "#000000", .25), "#FFFFFF", (world.inventory.activeSelection === i) * .334) : defaultStroke;
+                    imageCtx.lineWidth = 7.5;
+                    imageCtx.fillRect(0, 0, tileSize, tileSize);
+                    imageCtx.strokeRect(0, 0, tileSize, tileSize);
+                }
                 ctx.globalAlpha = .75;
-                ctx.strokeRect(xx, y - tileSize, tileSize, tileSize);
-                ctx.fillRect(xx, y - tileSize, tileSize, tileSize);
+                ctx.drawImage(imageCanvas, xx, y - tileSize);
                 world.clickableRegions.push({
                     x: xx,
                     y: y - tileSize,
@@ -1450,6 +1459,10 @@
                 });
                 ctx.globalAlpha = 1;
                 if (petal) {
+                    if (!world.seenPetals.includes([petal.name, petal.rarity].join("-"))) {
+                        world.seenPetals.push([petal.name, petal.rarity].join("-"));
+                        storage.set("unlockedPetals", world.seenPetals);
+                    }
                     if (petal.spawn > 1) {
                         for (let i = 0; i < petal.spawn; i ++) {
                             let xxx = xx + tileSize / 2,
@@ -1470,12 +1483,17 @@
             for (let i = 0; i < world.inventory.stored.length; i ++) {
                 let petal = PETAL_CONFIG[world.inventory.stored[i]];
                 let xx = offX + tileSize * i + spacing * i;
-                ctx.fillStyle = petal ? mixColors(global.rarityColors[petal.rarity], "#FFFFFF", (world.inventory.storedSelection === i) * .334) : defaultFill;
-                ctx.strokeStyle = petal ? mixColors(mixColors(global.rarityColors[petal.rarity], "#000000", .25), "#FFFFFF", (world.inventory.storedSelection === i) * .334) : defaultStroke;
-                ctx.lineWidth = 7.5;
+                {
+                    imageCanvas.width = tileSize;
+                    imageCanvas.height = tileSize;
+                    imageCtx.fillStyle = petal ? mixColors(global.rarityColors[petal.rarity], "#FFFFFF", (world.inventory.storedSelection === i) * .334) : defaultFill;
+                    imageCtx.strokeStyle = petal ? mixColors(mixColors(global.rarityColors[petal.rarity], "#000000", .25), "#FFFFFF", (world.inventory.storedSelection === i) * .334) : defaultStroke;
+                    imageCtx.lineWidth = 7.5;
+                    imageCtx.fillRect(0, 0, tileSize, tileSize);
+                    imageCtx.strokeRect(0, 0, tileSize, tileSize);
+                }
                 ctx.globalAlpha = .75;
-                ctx.strokeRect(xx, y - tileSize, tileSize, tileSize);
-                ctx.fillRect(xx, y - tileSize, tileSize, tileSize);
+                ctx.drawImage(imageCanvas, xx, y - tileSize);
                 world.clickableRegions.push({
                     x: xx,
                     y: y - tileSize,
@@ -1495,6 +1513,10 @@
                 });
                 ctx.globalAlpha = 1;
                 if (petal) {
+                    if (!world.seenPetals.includes([petal.name, petal.rarity].join("-"))) {
+                        world.seenPetals.push([petal.name, petal.rarity].join("-"));
+                        storage.set("unlockedPetals", world.seenPetals);
+                    }
                     if (petal.spawn > 1) {
                         for (let i = 0; i < petal.spawn; i ++) {
                             let xxx = xx + tileSize / 2,
@@ -1511,12 +1533,17 @@
             }
             { // DELETUS
                 let xx = offX + tileSize * world.inventory.stored.length + spacing * world.inventory.stored.length;
-                ctx.fillStyle = global.rarityColors["Legendary"];
-                ctx.strokeStyle = mixColors(global.rarityColors["Legendary"], "#000000", .25);
-                ctx.lineWidth = 7.5;
+                {
+                    imageCanvas.width = tileSize;
+                    imageCanvas.height = tileSize;
+                    imageCtx.fillStyle = global.rarityColors["Legendary"];
+                    imageCtx.strokeStyle = mixColors(global.rarityColors["Legendary"], "#000000", .25);
+                    imageCtx.lineWidth = 7.5;
+                    imageCtx.fillRect(0, 0, tileSize, tileSize);
+                    imageCtx.strokeRect(0, 0, tileSize, tileSize);
+                }
                 ctx.globalAlpha = .75;
-                ctx.strokeRect(xx, y - tileSize, tileSize, tileSize);
-                ctx.fillRect(xx, y - tileSize, tileSize, tileSize);
+                ctx.drawImage(imageCanvas, xx, y - tileSize);
                 world.clickableRegions.push({
                     x: xx,
                     y: y - tileSize,
@@ -1532,6 +1559,18 @@
                 ctx.globalAlpha = 1;
             }
         }
+        if (world.playerID === -1) {
+            // We ded bro
+            ctx.globalAlpha = .5;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+            drawText(ctx, "You died", canvas.width / 2, canvas.height / 2 - 20, 20);
+            drawText(ctx, "Press enter to respawn", canvas.width / 2, canvas.height / 2 + 10, 10);
+        }
+        drawText(ctx, "floomy.io", 20, 40, 15, "left");
+        drawText(ctx, `${world.serverEntities} entities | ${world.mspt}ms tick`, 20, 75, 8, "left");
+        drawText(ctx, `${world.bandwidth.in}bps in | ${world.bandwidth.out}bps out`, 20, 95, 8, "left");
+        drawText(ctx, `${world.latency} ms | ${world.fps} FPS`, 20, 115, 8, "left");
         world.frames++;
         requestAnimationFrame(gameLoop);
     }

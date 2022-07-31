@@ -20,24 +20,24 @@ const clientboundMobs = Object.values(mobConfig).map(rarity => Object.values(rar
 
 const mobSpawnTable = util.generateLootTable(mobConfig, {
     "Common": 100,
-    "Unusual": 40,
-    "Rare": 25,
-    "Epic": 8,
-    "Legendary": 2,
+    "Unusual": 60,
+    "Rare": 30,
+    "Epic": 15,
+    "Legendary": 6,
     "Mythical": 1,
-    "Unique": .5
+    "Unique": .1
 });
 
 const grid = new HSHG();
 const world = {
-    width: 14000,
-    height: 3000,
+    width: 42000,
+    height: 6000,
     zones: [{
         type: "easy",
         start: 0,
-        end: 4000,
+        end: 12000,
         spawning: {
-            maximum: 25,
+            maximum: 50,
             possible: {
                 "Common": ["Rock", "Ladybug", "Bee"],
                 "Epic": ["Giant Ladybug"]
@@ -45,37 +45,40 @@ const world = {
         }
     }, {
         type: "medium",
-        start: 4000,
-        end: 8000,
+        start: 12000,
+        end: 24000,
         spawning: {
-            maximum: 25,
+            maximum: 50,
             possible: {
                 "Common": ["Cactus", "Ladybug", "Bee"],
-                "Unusual": ["Hornet"]
-            }
-        }
-    }, {
-        type: "hard",
-        start: 8000,
-        end: 12000,
-        spawning: {
-            maximum: 25,
-            possible: {
-                "Common": ["Hornet", "Ladybug", "Bee"],
-                "Unusual": ["Rock"],
+                "Unusual": ["Hornet"],
                 "Rare": ["Beetle"]
             }
         }
     }, {
-        type: "unknown",
-        start: 12000,
-        end: 14000,
+        type: "hard",
+        start: 24000,
+        end: 36000,
         spawning: {
-            maximum: 35,
+            maximum: 50,
+            possible: {
+                "Common": ["Hornet", "Ladybug", "Bee"],
+                "Unusual": ["Rock"],
+                "Rare": ["Beetle"],
+                "Legendary": ["Legendary Beetle"]
+            }
+        }
+    }, {
+        type: "unknown",
+        start: 36000,
+        end: 42000,
+        spawning: {
+            maximum: 50,
             possible: {
                 "Unusual": ["Rock", "Hornet"],
                 "Rare": ["Beetle"],
                 "Epic": ["Giant Ladybug"],
+                "Legendary": ["Legendary Hornet", "Legendary Beetle"],
                 "Mythical": ["Mythical Ladybug"]
             }
         }
@@ -117,9 +120,9 @@ setInterval(function updateBandwidthUsage() {
     world.frames = 0;
 }, 1e3);
 
-let entities = 0,
-    flowers = [],
-    mobs = [],
+let entities = {},
+    flowers = {},
+    mobs = {},
     entityID = 0;
 
 class Vector {
@@ -225,7 +228,7 @@ class Entity {
             return () => data;
         })();
         this.updateAABB();
-        entities ++;
+        entities[this.id] = this;
     }
     set x(val) {
         if (Number.isFinite(val)) {
@@ -267,8 +270,9 @@ class Entity {
             return;
         }
         this.isKilled = 1;
+        this.collisionArray = [];
         this.removeFromGrid();
-        entities --;
+        delete entities[this.id];
     }
 }
 
@@ -286,7 +290,7 @@ class Flower extends Entity {
             this.petals[this.petals.length - 1].makeExtra();
         }
         //this.addToGrid();
-        flowers.push(this); 
+        flowers[this.id] = this;
     }
     update() {
         if (!this.health.check()) {
@@ -363,12 +367,12 @@ class Flower extends Entity {
                 this.petals[i].kill();
             }
         }
-        for (let projectile of this.projectiles) {
-            projectile.kill();
+        for (let i = 0; i < this.projectiles.length; i ++) {
+            this.projectiles[i].kill();
         }
-        this.projectiles = [];
-        entities --;
-        flowers = flowers.filter(flower => flower.source !== this.source);
+        this.collisionArray = [];
+        delete entities[this.id];
+        delete flowers[this.id];
     }
 }
 
@@ -419,26 +423,27 @@ class Petal extends Entity {
     }
     update() {
         if (!this.health.check()) {
-            this.destroy();
             return;
         }
         if (this.parentPetal != null && this.flower.petals.findIndex(petal => petal.slotID === this.parentPetal) === -1) {
             this.flower.petals = this.flower.petals.filter(petal => petal.id !== this.id);
-            this.destroy();
+            this.kill();
             return;
         }
-        if (this.type.frag && this.type.frag.amount > 0 && this.flower.attack && Date.now() - this.creation > this.type.recharge / 2) {
+        if (!this.hasFragged && this.type.frag && this.type.frag.amount > 0 && this.flower.attack && Date.now() - this.creation > this.type.recharge / 2 && this.health.check()) {
             for (let i = 0; i < this.type.frag.amount; i ++) {
                 this.flower.projectiles.push(new Projectile(this.x, this.y, this.type.frag, this.flower, this.angle + Math.PI / (this.type.frag.amount / 2) * i, this.saveType));
             }
-            this.destroy();
+            this.hasFragged = true;
+            this.health.damage(this.health.max * 2);
+            this.collisionArray = [];
             return;
         }
         this.updateAABB();
         if (this.type.healing && this.flower.health.percent < 99 && Date.now() - this.creation > this.type.recharge / 2) { // Roses
             if (util.getDistance(this, this.flower) < this.flower.size) {
                 this.flower.health.forceRegenerate(this.type.healing);
-                return this.health.damage(this.health.max);
+                this.health.damage(this.health.max);
             }
             this.velocity.x = util.lerp(this.velocity.x, (this.flower.x + (this.flower.velocity.x * this.flower.speed)) - this.x, .25);
             this.velocity.y = util.lerp(this.velocity.y, (this.flower.y + (this.flower.velocity.y * this.flower.speed)) - this.y, .25);
@@ -461,8 +466,9 @@ class Petal extends Entity {
             this.flower.health.resist = Math.min(1, this.flower.health.resist + this.type.damageResist);
         }
         this.isKilled = 1;
+        this.collisionArray = [];
         this.removeFromGrid();
-        entities --;
+        delete entities[this.id];
     }
 }
 
@@ -476,6 +482,7 @@ class Projectile extends Entity {
         this.damage = type.damage;
         this.range = type.range;
         this.size = type.size * parent.size;
+        this.poisonToApply = type.poison;
         this._v = {
             x: Math.cos(angle),
             y: Math.sin(angle)
@@ -489,7 +496,7 @@ class Projectile extends Entity {
     }
     update() {
         if (!this.health.check() || this.range <= 0) {
-            this.destroy();
+            this.kill();
             return;
         }
         this.range --;
@@ -506,8 +513,9 @@ class Projectile extends Entity {
         }
         this.isKilled = 1;
         this.removeFromGrid();
+        this.collisionArray = [];
         this.parent.projectiles = this.parent.projectiles.filter(r => r.id !== this.id);
-        entities --;
+        delete entities[this.id];
     }
 }
 
@@ -537,12 +545,12 @@ class Mob extends Entity {
         if (this.type.drops) {
             this.drops = this.type.drops;
         }
-        mobs.push(this);
+        mobs[this.id] = this;
     }
     refreshAI() {
         if (Date.now() - this.lastUpdate > 500) {
             this.lastUpdate = Date.now();
-            let suitable = flowers.filter(flower => !!flower && flower.source !== this.source && util.getDistance(flower, this) < this.size + 500);
+            let suitable = Object.values(flowers).filter(flower => !!flower && flower.source !== this.source && util.getDistance(flower, this) < this.size + 500);
             if (suitable.length) {
                 if (!suitable.includes(this.target)) {
                     this.target = suitable.sort((a, b) => util.getDistance(a, this) - util.getDistance(b, this))[0];
@@ -586,11 +594,9 @@ class Mob extends Entity {
                         this.acceleration.y = Math.sin(angle);
                         this.angle = angle;
                     }
-                    if (this.projectile) {
-                        if (this.projectile.ticker <= 0) {
-                            this.projectile.ticker = this.projectile.reload;
-                            this.projectiles.push(new Projectile(this.x, this.y, this.projectile, this));
-                        }
+                    if (this.projectile && this.projectile.ticker <= 0) {
+                        this.projectile.ticker = this.projectile.reload;
+                        this.projectiles.push(new Projectile(this.x, this.y, this.projectile, this));
                     }
                 } else if (Math.random() > .99) {
                     this.acceleration.x = Math.cos(angle);
@@ -637,15 +643,13 @@ class Mob extends Entity {
         }
         this.isKilled = 1;
         this.removeFromGrid();
-        entities --;
-        mobs = mobs.filter(mob => mob.id !== this.id);
+        this.collisionArray = [];
         for (let projectile of this.projectiles) {
             projectile.kill();
         }
         this.projectiles = [];
         if (this.drops && Math.random() > 1 - (this.drops.chance / 100)) {
-            let amount = 1 + Math.random() * (this.drops.maximum - 1);
-            for (let i = 0; i < amount; i ++) {
+            for (let i = 0; i < this.drops.maximum; i ++) {
                 let rarity = util.getRarity(0, Object.keys(this.drops.choices));
                 if (this.drops.choices[rarity]) {
                     let choice = util.choose(this.drops.choices[rarity]);
@@ -656,23 +660,32 @@ class Mob extends Entity {
                 }
             }
         }
+        delete entities[this.id];
+        delete mobs[this.id];
     }
 }
 
-let drops = [];
+let drops = {};
 class Drop extends Entity {
     constructor(x, y, index) {
         super(x, y);
         this.index = index;
         //
+        this.health = new Health(1);
         this.damage = 0;
         this.pushability = 0;
         this.size = 30;
+        this.timer = 500;
         //
         this.updateAABB();
-        drops.push(this);
+        drops[this.id] = this;
     }
     update() {
+        this.timer --;
+        if (this.timer <= 0) {
+            this.kill();
+            return;
+        }
         this.collisionArray = [];
     }
     kill() {
@@ -681,14 +694,16 @@ class Drop extends Entity {
         }
         this.isKilled = 1;
         this.removeFromGrid();
-        entities --;
-        drops = drops.filter(drop => drop.source !== this.source);
+        this.collisionArray = [];
+        delete entities[this.id];
+        delete drops[this.id];
     }
 }
 
 let bots = [];
 class Bot {
     constructor() {
+        this.id = bots.length;
         this.lastUpdate = 0;
         this.spawn();
         this.update();
@@ -696,15 +711,17 @@ class Bot {
     }
     spawn() {
         this.body = new Flower(Math.random() * world.width, Math.random() * world.height, null);
+        this.body.name = "BOT " + this.id;
     }
     update() {
         if (!this.body || !this.body.health.check()) {
+            this.target = null;
             this.spawn();
             this.lastUpdate -= 501;
         }
         if (this.body && Date.now() - this.lastUpdate > 500) {
             this.lastUpdate = Date.now();
-            let suitable = flowers.concat(mobs).filter(entity => entity.source !== this.body.source && util.getDistance(entity, this.body) < 1000);
+            let suitable = Object.values(flowers).concat(Object.values(mobs)).filter(entity => entity.source !== this.body.source && util.getDistance(entity, this.body) < 1000);
             if (suitable.length) {
                 if (!suitable.includes(this.target)) {
                     this.target = suitable.sort((a, b) => util.getDistance(a, this.body) - util.getDistance(b, this.body))[0];
@@ -772,6 +789,7 @@ const sockets = (function() {
                                 hit: (Date.now() - flower.health.lastHit) < 100,
                                 poisoned: !!flower.poisoned
                             }),
+                            name: flower.name || "Unnamed Flower",
                             x: Math.round(flower.x),
                             y: Math.round(flower.y),
                             size: Math.round(flower.size),
@@ -781,8 +799,9 @@ const sockets = (function() {
                         }, {
                             id: "StringUTF8",
                             flags: "Uint8",
-                            x: "Int16",
-                            y: "Int16",
+                            name: "StringUTF8",
+                            x: "Int32",
+                            y: "Int32",
                             size: "Uint8",
                             health: "Uint8",
                             petalLength: "Uint8",
@@ -794,8 +813,9 @@ const sockets = (function() {
                         hit: (Date.now() - flower.health.lastHit) < 100,
                         poisoned: !!flower.poisoned
                     }));
-                    writer.setInt16(Math.round(flower.x));
-                    writer.setInt16(Math.round(flower.y));
+                    writer.setStringUTF8(flower.name || "Unnamed Flower");
+                    writer.setUint32(Math.round(flower.x));
+                    writer.setUint32(Math.round(flower.y));
                     writer.setUint8(Math.round(flower.size));
                     writer.setUint8(flower.health.percent);
                     writer.setUint8(flower.petals.filter(petal => !petal.isPlaceholder && petal.health.check()).length);
@@ -818,8 +838,8 @@ const sockets = (function() {
                             }, {
                                 id: "StringUTF8",
                                 flags: "Uint8",
-                                x: "Int16",
-                                y: "Int16",
+                                x: "Int32",
+                                y: "Int32",
                                 size: "Uint8",
                                 index: "Int8"
                             });
@@ -828,8 +848,8 @@ const sockets = (function() {
                         writer.setUint8(bitflag({
                             hit: (Date.now() - petal.health.lastHit) < 100
                         }));
-                        writer.setInt16(Math.round(petal.x));
-                        writer.setInt16(Math.round(petal.y));
+                        writer.setUint32(Math.round(petal.x));
+                        writer.setUint32(Math.round(petal.y));
                         writer.setUint8(Math.round(petal.size));
                         writer.setInt8(petal.type.index);
                     }
@@ -851,8 +871,8 @@ const sockets = (function() {
                             }, {
                                 id: "StringUTF8",
                                 flags: "Uint8",
-                                x: "Int16",
-                                y: "Int16",
+                                x: "Int32",
+                                y: "Int32",
                                 size: "Uint8",
                                 angle: "Float32",
                                 index: "Int8"
@@ -862,8 +882,8 @@ const sockets = (function() {
                         writer.setUint8(bitflag({
                             hit: (Date.now() - projectile.health.lastHit) < 100
                         }));
-                        writer.setInt16(Math.round(projectile.x));
-                        writer.setInt16(Math.round(projectile.y));
+                        writer.setUint32(Math.round(projectile.x));
+                        writer.setUint32(Math.round(projectile.y));
                         writer.setUint8(projectile.size);
                         writer.setFloat32(projectile.angle);
                         writer.setInt8(projectile.index || 0);
@@ -887,8 +907,8 @@ const sockets = (function() {
                         }, {
                             id: "StringUTF8",
                             flags: "Uint8",
-                            x: "Int16",
-                            y: "Int16",
+                            x: "Int32",
+                            y: "Int32",
                             size: "Uint8",
                             index: "Uint8",
                             angle: "Float32",
@@ -900,8 +920,8 @@ const sockets = (function() {
                         hit: (Date.now() - mob.health.lastHit) < 100,
                         poisoned: !!mob.poisoned
                     }));
-                    writer.setInt16(Math.round(mob.x));
-                    writer.setInt16(Math.round(mob.y));
+                    writer.setUint32(Math.round(mob.x));
+                    writer.setUint32(Math.round(mob.y));
                     writer.setUint8(mob.size);
                     writer.setUint8(mob.type.index);
                     writer.setFloat32(mob.angle);
@@ -924,8 +944,8 @@ const sockets = (function() {
                             }, {
                                 id: "StringUTF8",
                                 flags: "Uint8",
-                                x: "Int16",
-                                y: "Int16",
+                                x: "Int32",
+                                y: "Int32",
                                 size: "Uint8",
                                 angle: "Float32"
                             });
@@ -934,8 +954,8 @@ const sockets = (function() {
                         writer.setUint8(bitflag({
                             hit: (Date.now() - projectile.health.lastHit) < 100
                         }));
-                        writer.setInt16(Math.round(projectile.x));
-                        writer.setInt16(Math.round(projectile.y));
+                        writer.setUint32(Math.round(projectile.x));
+                        writer.setUint32(Math.round(projectile.y));
                         writer.setUint8(projectile.size);
                         writer.setFloat32(projectile.angle);
                     }
@@ -951,21 +971,21 @@ const sockets = (function() {
                             index: drop.index
                         }, {
                             id: "StringUTF8",
-                            x: "Int16",
-                            y: "Int16",
+                            x: "Int32",
+                            y: "Int32",
                             size: "Uint8",
                             index: "Uint8"
                         });
                     }
                     writer.setStringUTF8(drop.id.toString());
-                    writer.setInt16(Math.round(drop.x));
-                    writer.setInt16(Math.round(drop.y));
+                    writer.setUint32(Math.round(drop.x));
+                    writer.setUint32(Math.round(drop.y));
                     writer.setUint8(drop.size);
                     writer.setUint8(drop.index);
                 }
             } break;
             case 1: {
-                writer.setUint16(entities);
+                writer.setUint16(Object.keys(entities).length);
                 writer.setStringUTF8(world.mspt);
             } break;
             case 2: {
@@ -1045,7 +1065,7 @@ const sockets = (function() {
                 return 0;
             }
             // Don't let them put nothing in their active slot, but don't count it as a violation either
-            if (this.storedSlots[storedIndex] == false || this.storedSlots[storedIndex] < 0) {
+            if (this.storedSlots[storedIndex] === false || this.storedSlots[storedIndex] < 0) {
                 return 1;
             }
             // Replace the stored first
@@ -1109,8 +1129,9 @@ const sockets = (function() {
         socket.cryptoIn = new protocol.CRYPTO(...protocol.keys.inboundKeys);
         socket.cryptoOut = new protocol.CRYPTO(...protocol.keys.outboundKeys);
         socket.id = socketID ++;
-        socket.name = request.query ? request.query.name || "Unnamed" : "Unnamed";
-        socket.body = new Flower(Math.random() * world.width, Math.random() * world.height, socket);
+        socket.name = request.query ? request.query.name || "Unnamed Flower" : "Unnamed Flower";
+        socket.name = util.cleanString(socket.name, 25);
+        socket.body = new Flower(Math.random() * world.zones[0].end, Math.random() * world.height, socket);
         socket.body.update();
         socket.body.name = socket.name;
         Object.defineProperty(socket, "identification", {
@@ -1172,6 +1193,14 @@ const sockets = (function() {
                         }
                     }
                     break;
+                case 3: {
+                    if (socket.body == null || !socket.body.health.check()) {
+                        socket.body = new Flower(Math.random() * world.zones[0].end, Math.random() * world.height, socket);
+                        socket.body.update();
+                        socket.body.name = socket.name;
+                        socket.body.inventory = new Inventory(socket, socket.body);
+                    }
+                } break;
             }
         }
         socket.talk = function(type, data) {
@@ -1183,10 +1212,10 @@ const sockets = (function() {
         }
         socket.viewWorld = function() {
             socket.talk(0, {
-                playerID: socket.body.id,
-                flowers: flowers.filter(flower => Math.abs(flower.x - socket.body.x) <= 2000 && Math.abs(flower.y - socket.body.y) <= 1100),
-                mobs: mobs.filter(mob => Math.abs(mob.x - socket.body.x) <= 2000 && Math.abs(mob.y - socket.body.y) <= 1100),
-                drops: drops.filter(drop => Math.abs(drop.x - socket.body.x) <= 2000 && Math.abs(drop.y - socket.body.y) <= 1100)
+                playerID: socket.body.health.check() ? socket.body.id : -1,
+                flowers: Object.values(flowers).filter(flower => Math.abs(flower.x - socket.body.x) <= 2000 && Math.abs(flower.y - socket.body.y) <= 1100),
+                mobs: Object.values(mobs).filter(mob => Math.abs(mob.x - socket.body.x) <= 2000 && Math.abs(mob.y - socket.body.y) <= 1100),
+                drops: Object.values(drops).filter(drop => Math.abs(drop.x - socket.body.x) <= 2000 && Math.abs(drop.y - socket.body.y) <= 1100)
             });
         }
         socket.sendPing = function() {
@@ -1205,14 +1234,45 @@ const sockets = (function() {
     }
 })();
 
+function purge() {
+    for (let id in entities) {
+        let entity = entities[id];
+        if (entity instanceof Flower) {
+            if (!entity.health.check()) {
+                entity.kill();
+                delete entities[id];
+                delete flowers[id];
+            }
+        }
+        if (entity instanceof Petal || entity instanceof Projectile) {
+            if (!entity.health.check()) {
+                entity.kill();
+                delete entities[id];
+            }
+        }
+        if (entity instanceof Mob) {
+            if (!entity.health.check()) {
+                entity.kill();
+                delete entities[id];
+                delete mobs[id];
+            }
+        }
+        if (entity instanceof Drop) {
+            if (entity.timer <= 0 || !entity.health.check()) {
+                entity.kill();
+                delete entities[id];
+                delete drops[id];
+            }
+        }
+    }
+}
+
 let updateLoopDelta = 0,
     updateLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - updateLoopDelta < updateLoopTick * .6) {
+    if (Date.now() - updateLoopDelta < updateLoopTick) {
         return;
     }
-    flowers = flowers.filter(flower => !!flower && flower.health.check());
-    mobs = mobs.filter(mob => !!mob && mob.health.check());
     for (let client of sockets.clients) {
         client.viewWorld();
     }
@@ -1226,19 +1286,20 @@ setInterval(function() {
     for (let client of sockets.clients) {
         client.sendPing();
     }
-    for (let i = bots.length; i < 0; i ++) {
+    for (let i = bots.length; i < 5; i ++) {
         if (Math.random() > .95) {
             new Bot();
         }
     }
     let census = {};
-    for (let mob of mobs) {
+    for (let id in mobs) {
+        let mob = mobs[id];
         census[mob.zone] = (census[mob.zone] || 0) + 1;
     }
     for (let zone of world.zones) {
         if (zone.spawning) {
             for (let i = (census[zone.type] || 0); i < zone.spawning.maximum; i ++) {
-                if (Math.random() > .95) {
+                if (Math.random() > 0) {
                     let chosenType,
                         validTypes = Object.keys(zone.spawning.possible),
                         i = 1000;
@@ -1262,22 +1323,20 @@ setInterval(function() {
 let gameLoopDelta = 0,
     gameLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - gameLoopDelta < gameLoopTick * .6) {
+    if (Date.now() - gameLoopDelta < gameLoopTick * .8) {
         return;
     }
     let start = performance.now();
-    flowers = flowers.filter(flower => !!flower && flower.health.check());
-    mobs = mobs.filter(mob => !!mob && mob.health.check());
-    for (let mob of mobs) {
+    for (let id in mobs) {
+        let mob = mobs[id];
         mob.update();
-        mob.projectiles = mob.projectiles.filter(r => r.range > 0 && r.health.check());
     }
-    for (let flower of flowers) {
+    for (let id in flowers) {
+        let flower = flowers[id];
         flower.update();
-        flower.projectiles = flower.projectiles.filter(r => r.range > 0 && r.health.check());
     }
-    for (let drop of drops) {
-        drop.update();
+    for (let id in drops) {
+        drops[id].update();
     }
     grid.update();
     let pairs = grid.queryForCollisionPairs();
@@ -1296,6 +1355,8 @@ setInterval(function() {
                 if (player.inventory.pickup(drop)) {
                     drop.kill();
                 }
+            } else {
+                drop.kill();
             }
             continue;
         } else if (instance instanceof Drop || other instanceof Drop) {
@@ -1332,13 +1393,14 @@ setInterval(function() {
                 intensity: other.poisonToApply[2]
             };
         }
-        if (!instance.health.check()) {
+        /*if (!instance.health.check()) {
             instance.kill();
         }
         if (!other.health.check()) {
             other.kill();
-        }
+        }*/
     }
+    purge();
     world.mspt = (performance.now() - start).toFixed(1);
     world.frames ++;
     gameLoopDelta = Date.now();
@@ -1393,7 +1455,7 @@ discord.addCommand("ping", function(message, args, bot) {
                 value: sockets.clients.length + ""
             }, {
                 name: "Entities",
-                value: entities + ""
+                value: Object.keys(entities).length + ""
             }, {
                 name: "Tick Speed",
                 value: world.mspt + "ms"
