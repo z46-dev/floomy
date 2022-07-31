@@ -1323,7 +1323,7 @@ setInterval(function() {
 let gameLoopDelta = 0,
     gameLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - gameLoopDelta < gameLoopTick * .8) {
+    if (Date.now() - gameLoopDelta < gameLoopTick) {
         return;
     }
     let start = performance.now();
