@@ -79,7 +79,8 @@ const world = {
                 "Rare": ["Beetle"],
                 "Epic": ["Giant Ladybug"],
                 "Legendary": ["Legendary Hornet", "Legendary Beetle"],
-                "Mythical": ["Mythical Ladybug"]
+                "Mythical": ["Mythical Ladybug"],
+                "Unique": ["Square"]
             }
         }
     }],
@@ -331,7 +332,7 @@ class Flower extends Entity {
         for (let i = 0; i < this.petals.length; i ++) {
             if (this.petals[i].isPlaceholder) {
                 if (Date.now() - this.petals[i].from >= this.petals[i].timer) {
-                    this.petals[i] = new Petal(this, this.petals[i].distance, this.petals[i].slotID, this.petals[i].type, this.petals[i].parentPetal);
+                    this.petals[i] = new Petal(this, this.petals[i].distance, this.petals[i].slotID, this.petals[i].saveType, this.petals[i].parentPetal);
                     this.petals[i].makeExtra();
                 }
                 continue;
@@ -344,7 +345,7 @@ class Flower extends Entity {
                     from: Date.now(),
                     timer: this.petals[i].type.recharge,
                     distance: this.petals[i].distance,
-                    type: this.petals[i].saveType,
+                    saveType: this.petals[i].saveType,
                     parentPetal: this.petals[i].parentPetal
                 };
                 continue;
@@ -363,6 +364,9 @@ class Flower extends Entity {
         this.isKilled = 1;
         this.removeFromGrid();
         for (let i = 0; i < this.petals.length; i ++) {
+            if (clientboundPetals[this.petals[i].saveType].rarity !== "Common" && Math.random() > .5) {
+                new Drop(this.x, this.y, this.petals[i].saveType);
+            }
             if (!this.petals[i].isPlaceholder) {
                 this.petals[i].kill();
             }
@@ -1086,7 +1090,7 @@ const sockets = (function() {
                     from: Date.now(),
                     timer: type.recharge,
                     distance: this.body.petals[i].distance,
-                    type: oldStored,
+                    saveType: oldStored,
                     parentPetal: null
                 };
                 for (let petal of this.body.petals) {
@@ -1323,7 +1327,7 @@ setInterval(function() {
 let gameLoopDelta = 0,
     gameLoopTick = 1000 / 60;
 setInterval(function() {
-    if (Date.now() - gameLoopDelta < gameLoopTick * .9) {
+    if (Date.now() - gameLoopDelta < gameLoopTick * .85) {
         return;
     }
     let start = performance.now();

@@ -1,3 +1,8 @@
+# Beta v0.0.2
+- Fixed some rarity issues
+- Fixed some bugs
+- Flowers now drop petals randomly when they die
+
 # Beta v0.0.1
 - Made the rarity colors proper
 - Fixed a bug with petal fading
