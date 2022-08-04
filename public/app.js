@@ -1,4 +1,4 @@
-(function () {
+(async function () {
     Math.TAU = Math.PI * 2;
     Math.HPI = Math.PI / 2;
     function mixColors(colorA, colorB, amount) {
@@ -57,7 +57,7 @@
             "Mythical": "#20d9dc",
             "Unique": "#df1f67"
         },
-        screenRatio: window.innerWidth * devicePixelRatio / 1920
+        screenRatio: window.innerWidth * window.devicePixelRatio / 1920
     };
 
     function wait(time) {
@@ -68,6 +68,38 @@
 
     window.onload = async function () {
         await wait(Math.random() * 3000);
+        window.toggleChangelog = await (async function() {
+            const data = (await (await fetch(`//${window.serverIP || "localhost:3000"}/changelog.md`)).text()).split("\n");
+            let changelogElement = document.getElementById("changelog");
+            for (let line of data) {
+                let tag
+                switch (line[0]) {
+                    case "#":
+                        tag = "b";
+                        break;
+                    case "-":
+                        tag = "span";
+                        break;
+                    default:
+                        tag = "br";
+                }
+                if (tag === "br") {
+                    changelogElement.innerHTML += `<div></div><br/>`;
+                } else {
+                    changelogElement.innerHTML += `<${tag}>${line.slice(1)}</${tag}><br/>`;
+                }
+            }
+            let display = false;
+            return function(force) {
+                if (display || force === "off") {
+                    changelogElement.style.display = "none";
+                    display = false;
+                } else {
+                    changelogElement.style.display = "block";
+                    display = true;
+                }
+            }
+        })();
         document.body.classList.add("loaded");
         document.getElementsByClassName("holder")[0].classList.add("animating");
         document.querySelector(".loadingDiv").style.display = "none";
@@ -81,7 +113,7 @@
             function onResize() {
                 canvas.width = innerWidth * devicePixelRatio;
                 canvas.height = innerHeight * devicePixelRatio;
-                global.screenRatio = window.innerWidth * devicePixelRatio / 1920;
+                global.screenRatio = window.innerWidth * window.devicePixelRatio / 1920;
             }
 
             onResize();
@@ -1257,7 +1289,7 @@
         world.beetleAnimation.angle += world.beetleAnimation.add;
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.scale(1 / global.screenRatio, 1 / global.screenRatio);
+        ctx.save();
         if (world.zones.length) {
             let i = world.zones.length;
             while (i > 0) {
@@ -1293,6 +1325,7 @@
         }
         ctx.stroke();
         ctx.restore();
+        ctx.scale(global.screenRatio, global.screenRatio);
         for (let object of world.drops) {
             object.x = lerp(object.x, object.rx, .175);
             object.y = lerp(object.y, object.ry, .175);
@@ -1301,7 +1334,7 @@
             }
             const _petal = PETAL_CONFIG[object.index] || PETAL_CONFIG[0];
             ctx.save();
-            ctx.translate((object.x - player.camera.x) + canvas.width / 2, (object.y - player.camera.y) + canvas.height / 2);
+            ctx.translate(((object.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((object.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
             ctx.rotate(object.angle);
             ctx.globalAlpha = object.fade;
             drawPolygon(ctx, 0, 0, 4, object.size, 0, global.rarityColors[_petal.rarity], mixColors(global.rarityColors[_petal.rarity], "#000000", .25));
@@ -1331,13 +1364,13 @@
                 projectile.angle = lerpAngle(projectile.angle, projectile.rangle, .175);
                 ctx.save();
                 ctx.globalAlpha = projectile.fade;
-                ctx.translate((projectile.x - player.camera.x) + canvas.width / 2, (projectile.y - player.camera.y) + canvas.height / 2);
+                ctx.translate(((projectile.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((projectile.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
                 let myColor = mixColors(colors[_projectile.color || "petalWhite"], colors.hit, +projectile.hit);
                 drawPolygon(ctx, 0, 0, _projectile.shape || 0, projectile.size * (1 + (1 - projectile.fade)), projectile.angle + Math.PI / 2, myColor, mixColors(myColor, "#000000", 0.25), projectile.id);
                 ctx.restore();
             });
             ctx.save();
-            ctx.translate((object.x - player.camera.x) + canvas.width / 2, (object.y - player.camera.y) + canvas.height / 2);
+            ctx.translate(((object.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((object.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
             ctx.globalAlpha = object.fade;
             let myColor = mixColors(colors[object.poisoned ? "purple" : object._mob.color || "gold"], colors.hit, +object.hit * (object.poisoned ? .5 : 1));
             drawPolygon(ctx, 0, 0, object._mob.shape || 0, object.size * object.fade, object.angle, myColor, mixColors(myColor, "#000000", 0.25), object.id);
@@ -1360,7 +1393,7 @@
                 petal.y = lerp(petal.y, petal.ry, .175);
                 ctx.save();
                 ctx.globalAlpha = petal.fade;
-                ctx.translate((petal.x - player.camera.x) + canvas.width / 2, (petal.y - player.camera.y) + canvas.height / 2);
+                ctx.translate(((petal.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((petal.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
                 let myColor = mixColors(colors[petal._petal.color || "petalWhite"], colors.hit, +petal.hit);
                 drawPolygon(ctx, 0, 0, petal._petal.shape || 0, petal.size * (1 + (1 - petal.fade)), (Date.now() - petal.creation) / 334, myColor, mixColors(myColor, "#000000", 0.25), petal.id);
                 ctx.restore();
@@ -1372,13 +1405,13 @@
                 projectile.angle = lerpAngle(projectile.angle, projectile.rangle, .175);
                 ctx.save();
                 ctx.globalAlpha = projectile.fade;
-                ctx.translate((projectile.x - player.camera.x) + canvas.width / 2, (projectile.y - player.camera.y) + canvas.height / 2);
+                ctx.translate(((projectile.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((projectile.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
                 let myColor = mixColors(colors[_projectile.color || "petalWhite"], colors.hit, +projectile.hit);
                 drawPolygon(ctx, 0, 0, _projectile.shape || 0, projectile.size * (1 + (1 - projectile.fade)), projectile.angle + Math.PI / 2, myColor, mixColors(myColor, "#000000", 0.25), projectile.id);
                 ctx.restore();
             });
             ctx.save();
-            ctx.translate((object.x - player.camera.x) + canvas.width / 2, (object.y - player.camera.y) + canvas.height / 2);
+            ctx.translate(((object.x - player.camera.x) + canvas.width / 2) / global.screenRatio, ((object.y - player.camera.y) + canvas.height / 2) / global.screenRatio);
             ctx.globalAlpha = object.fade;
             let myColor = mixColors(colors[object.poisoned ? "purple" : object.color || "gold"], colors.hit, +object.hit * (object.poisoned ? .5 : 1));
             drawPolygon(ctx, 0, 0, 0, object.size * object.fade, 0, myColor, mixColors(myColor, "#000000", 0.25), object.id);
@@ -1571,6 +1604,7 @@
         drawText(ctx, `${world.serverEntities} entities | ${world.mspt}ms tick`, 20, 75, 8, "left");
         drawText(ctx, `${world.bandwidth.in}bps in | ${world.bandwidth.out}bps out`, 20, 95, 8, "left");
         drawText(ctx, `${world.latency} ms | ${world.fps} FPS`, 20, 115, 8, "left");
+        ctx.restore();
         world.frames++;
         requestAnimationFrame(gameLoop);
     }

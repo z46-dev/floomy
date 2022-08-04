@@ -1432,7 +1432,6 @@ app.get("/", (function() {
     }
 })());
 
-app.use(express.static(__dirname + "/public"));
 app.ws("/", sockets.connect);
 app.listen(world.port, () => console.log("Server listening on port", world.port));
 

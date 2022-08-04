@@ -147,6 +147,41 @@ canvas {
     image-rendering: pixelated;
 }
 
+#changelog {
+    display: none;
+    position: absolute;
+    bottom: 50px;
+    left: 10px;
+    font-size: larger;
+    -webkit-text-fill-color: white;
+    -webkit-text-stroke-color: black;
+    -webkit-text-stroke-width: 1px; 
+    font-family: sans-serif;
+    font-weight: bold;
+    cursor: default;
+    text-align: left;
+    background-color: #9bb56b;
+    border: 5px solid #7e9357;
+    border-radius: 5px;
+}
+
+#changelog span {
+    margin: 5px;
+}
+
+#changelog b {
+    margin: 5px;
+    color: #000000;
+}
+
+#changelog div {
+    margin-left: 20px;
+    margin-right: 20px;
+    border: 5px solid #7e9357;
+    border-radius: 10px;
+    width: calc(100% - 50px);
+}
+
 @keyframes slideDown {
     from {
         top: -50%;
