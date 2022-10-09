@@ -121,8 +121,8 @@ setInterval(function updateBandwidthUsage() {
     world.frames = 0;
 }, 1e3);
 
-let entities = {},
-    flowers = {},
+let entities = new Map(),
+    flowers = new Map(),
     mobs = {},
     entityID = 0;
 
@@ -229,7 +229,7 @@ class Entity {
             return () => data;
         })();
         this.updateAABB();
-        entities[this.id] = this;
+        entities.set(this.id, this);
     }
     set x(val) {
         if (Number.isFinite(val)) {
@@ -273,7 +273,7 @@ class Entity {
         this.isKilled = 1;
         this.collisionArray = [];
         this.removeFromGrid();
-        delete entities[this.id];
+        entities.delete(this.id);
     }
 }
 
@@ -375,7 +375,7 @@ class Flower extends Entity {
             this.projectiles[i].kill();
         }
         this.collisionArray = [];
-        delete entities[this.id];
+        entities.delete(this.id);
         delete flowers[this.id];
     }
 }
@@ -472,7 +472,7 @@ class Petal extends Entity {
         this.isKilled = 1;
         this.collisionArray = [];
         this.removeFromGrid();
-        delete entities[this.id];
+        entities.delete(this.id);
     }
 }
 
@@ -519,7 +519,7 @@ class Projectile extends Entity {
         this.removeFromGrid();
         this.collisionArray = [];
         this.parent.projectiles = this.parent.projectiles.filter(r => r.id !== this.id);
-        delete entities[this.id];
+        entities.delete(this.id);
     }
 }
 
@@ -664,7 +664,7 @@ class Mob extends Entity {
                 }
             }
         }
-        delete entities[this.id];
+        entities.delete(this.id);
         delete mobs[this.id];
     }
 }
@@ -699,7 +699,7 @@ class Drop extends Entity {
         this.isKilled = 1;
         this.removeFromGrid();
         this.collisionArray = [];
-        delete entities[this.id];
+        entities.delete(this.id);
         delete drops[this.id];
     }
 }
@@ -989,7 +989,7 @@ const sockets = (function() {
                 }
             } break;
             case 1: {
-                writer.setUint16(Object.keys(entities).length);
+                writer.setUint16(entities.size);
                 writer.setStringUTF8(world.mspt);
             } break;
             case 2: {
@@ -1094,7 +1094,7 @@ const sockets = (function() {
                     parentPetal: null
                 };
                 for (let petal of this.body.petals) {
-                    if (petal.parentPetal === activeIndex && petal.slotID === -1) {
+                    if (petal.parentPetal === activeIndex && petal.slotID === -1 && petal instanceof Petal) {
                         // it do be kil
                         petal.kill();
                         this.body.petals = this.body.petals.filter(r => r.id !== petal.id);
@@ -1239,36 +1239,35 @@ const sockets = (function() {
 })();
 
 function purge() {
-    for (let id in entities) {
-        let entity = entities[id];
+    entities.forEach(entity => {
         if (entity instanceof Flower) {
             if (!entity.health.check()) {
                 entity.kill();
-                delete entities[id];
-                delete flowers[id];
+                entities.delete(entity.id);
+                delete flowers[entity.id];
             }
         }
         if (entity instanceof Petal || entity instanceof Projectile) {
             if (!entity.health.check()) {
                 entity.kill();
-                delete entities[id];
+                entities.delete(entity.id);
             }
         }
         if (entity instanceof Mob) {
             if (!entity.health.check()) {
                 entity.kill();
-                delete entities[id];
-                delete mobs[id];
+                entities.delete(entity.id);
+                delete mobs[entity.id];
             }
         }
         if (entity instanceof Drop) {
             if (entity.timer <= 0 || !entity.health.check()) {
                 entity.kill();
-                delete entities[id];
-                delete drops[id];
+                entities.delete(entity.id);
+                delete drops[entity.id];
             }
         }
-    }
+    });
 }
 
 let updateLoopDelta = 0,
@@ -1458,7 +1457,7 @@ discord.addCommand("ping", function(message, args, bot) {
                 value: sockets.clients.length + ""
             }, {
                 name: "Entities",
-                value: Object.keys(entities).length + ""
+                value: entities.size + ""
             }, {
                 name: "Tick Speed",
                 value: world.mspt + "ms"
